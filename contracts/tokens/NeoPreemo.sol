@@ -61,16 +61,18 @@ contract NeoPreemo is INeoPreemo, ERC721Enumerable, Ownable, CreatorRole {
     }
 
     function tokenSellRate(uint256 tokenId) public override view virtual returns (uint256) {
-        require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+        require(_exists(tokenId), "ERC721Metadata: Sell rate query for nonexistent token");
         return tokenResellRate[tokenId];
     }
 
     function uriOriginalToken(string memory _uri) public override view returns (uint256) {
+        require(uniqueUriToken[_uri] != 0, "ERC721Metadata: Uri original token query for nonexistent token");
         return uniqueUriToken[_uri];
     }
 
     // Artist wallet address of token
     function creatorOf(uint256 _tokenId) public override view returns (address) {
+        require(tokenCreator[_tokenId] != address(0), "ERC721Metadata: Token creator query for nonexistent token");
         return tokenCreator[_tokenId];
     }
 

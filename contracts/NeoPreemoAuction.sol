@@ -116,11 +116,13 @@ contract NeoPreemoAuction is NeoPreemoBase, INeoPreemoAuction {
     function bid(uint256 _tokenId) public override payable auctionExist(_tokenId) auctionIsOpen(_tokenId) {
         require(isValidBid(_tokenId), "Invalid Ether amount sent.");
         Auction storage tmpAuction = tokenCurrentAuction[_tokenId];
+        
+        tmpAuction.currentBidPrice = msg.value;
+        tmpAuction.currentBuyer = payable(_msgSender());
+
         if(tmpAuction.currentBuyer != address(0)) {
             tmpAuction.currentBuyer.transfer(tmpAuction.currentBidPrice);
         }
-        tmpAuction.currentBidPrice = msg.value;
-        tmpAuction.currentBuyer = payable(_msgSender());
 
         emit Bid(msg.sender, msg.value, _tokenId); 
     }
