@@ -47,11 +47,11 @@ contract NeoPreemoSale is NeoPreemoBase, INeoPreemoSale {
 
     // Check if the sale exist on this contract, not if the token exist on token contract
     function _exists(uint256 tokenId) internal view override virtual returns (bool) {
-        return tokenCreator[tokenId] != address(0);
+        return tokenDetails[tokenId].tokenCreator != address(0);
     }
 
     function tokenURI(uint256 _tokenId) public view override saleExist(_tokenId) returns (string memory) {
-        return tokenUri[_tokenId];
+        return tokenDetails[_tokenId].tokenUri;
     }
 
     function price(uint256 _tokenId) public view override saleExist(_tokenId) returns (uint256) {
@@ -101,8 +101,8 @@ contract NeoPreemoSale is NeoPreemoBase, INeoPreemoSale {
         require(_creator != address(0), "NeoPreemoAuction: token owner address cannot be 0");
         require(_price > 0, "NeoPreemoSale: price cannot set to 0");
         require(_editions > 0 && _editions < 10000, "NeoPreemoSale: number of editions should between 1 and 9999");
-        tokenUri[_tokenId] = _uri;
-        tokenCreator[_tokenId] = _creator;
+        tokenDetails[_tokenId].tokenUri = _uri;
+        tokenDetails[_tokenId].tokenCreator = _creator;
         tokenCurrentSale[_tokenId] = Sale(_type, SaleStatus.FORSALE, _owner, _creator, _price, 0, 0, payable(address(0)), _editions, 0);
         if(_type == SaleType.INITIAL) {
             emit ArtworkListed(_tokenId, _uri, _creator, _price);
@@ -114,6 +114,7 @@ contract NeoPreemoSale is NeoPreemoBase, INeoPreemoSale {
     function purchase(uint256 _tokenId) public override payable saleExist(_tokenId) saleIsOpen(_tokenId) {
         Sale storage tmpSale = tokenCurrentSale[_tokenId];
         require(msg.value >= tmpSale.price, "NeoPreemoSale: insuficient ether value sent");
+        require(_msgSender() != tmpSale.owner, "Buyer is the same as the owner");
 
         // payout logic
         tmpSale.buyer = payable(_msgSender());
@@ -155,7 +156,7 @@ contract NeoPreemoSale is NeoPreemoBase, INeoPreemoSale {
     function _mintToken(uint256 _artworkId, uint256 _tokenEditionId, bool _isOriginal) private {
         // Mint Logic
         Sale storage tmpSale = tokenCurrentSale[_artworkId];
-        NeoPreemo(tokenContract).createTokenForEdition(_tokenEditionId, tokenUri[_artworkId], tmpSale.owner, tmpSale.buyer, _isOriginal, creatorRate);
+        NeoPreemo(tokenContract).createTokenForEdition(_tokenEditionId, tokenDetails[_artworkId].tokenUri, tmpSale.owner, tmpSale.buyer, _isOriginal, creatorRate);
     }
 
     function closeSale(uint256 _tokenId) public override saleExist(_tokenId) saleIsOpen(_tokenId){

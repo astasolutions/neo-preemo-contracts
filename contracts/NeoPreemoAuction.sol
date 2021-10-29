@@ -48,11 +48,11 @@ contract NeoPreemoAuction is NeoPreemoBase, INeoPreemoAuction {
     }
 
     function _exists(uint256 tokenId) internal view override virtual returns (bool) {
-        return tokenCreator[tokenId] != address(0);
+        return tokenDetails[tokenId].tokenCreator != address(0);
     }
 
     function tokenURI(uint256 _tokenId) public view override auctionExist(_tokenId) returns (string memory) {
-        return tokenUri[_tokenId];
+        return tokenDetails[_tokenId].tokenUri;
     }
 
     function price(uint256 _tokenId) public view override auctionExist(_tokenId) returns (uint256) {
@@ -99,8 +99,8 @@ contract NeoPreemoAuction is NeoPreemoBase, INeoPreemoAuction {
     function _createAuction(uint256 _tokenId, string memory _uri, address payable _creator, address payable _owner, uint256 _price, SaleType _type) private {
         require(_creator != address(0), "NeoPreemoAuction: token owner address cannot be 0");
         require(_price > 0, "NeoPreemoSale: price cannot set to 0");
-        tokenUri[_tokenId] = _uri;
-        tokenCreator[_tokenId] = _creator;
+        tokenDetails[_tokenId].tokenUri = _uri;
+        tokenDetails[_tokenId].tokenCreator = _creator;
         tokenCurrentAuction[_tokenId] = Auction(_type, AuctionStatus.FORAUCTION, _owner, _creator, _price, 0, 0, 0, payable(address(0)));
         if(_type == SaleType.INITIAL) {
             emit ArtworkListed(_tokenId, _uri, _creator, _price);
@@ -116,7 +116,7 @@ contract NeoPreemoAuction is NeoPreemoBase, INeoPreemoAuction {
     function bid(uint256 _tokenId) public override payable auctionExist(_tokenId) auctionIsOpen(_tokenId) {
         require(isValidBid(_tokenId), "Invalid Ether amount sent.");
         Auction storage tmpAuction = tokenCurrentAuction[_tokenId];
-        
+        require(_msgSender() != tmpAuction.owner, "Buyer is the same as the owner");
         tmpAuction.currentBidPrice = msg.value;
         tmpAuction.currentBuyer = payable(_msgSender());
 
@@ -160,7 +160,7 @@ contract NeoPreemoAuction is NeoPreemoBase, INeoPreemoAuction {
 
     function _mintToken(uint256 _tokenId) private {
         Auction storage tmpAuction = tokenCurrentAuction[_tokenId];
-        NeoPreemo(tokenContract).createTokenFor(_tokenId, tokenUri[_tokenId], tmpAuction.owner, tmpAuction.currentBuyer, creatorRate);
+        NeoPreemo(tokenContract).createTokenFor(_tokenId, tokenDetails[_tokenId].tokenUri, tmpAuction.owner, tmpAuction.currentBuyer, creatorRate);
         tokenCurrentAuction[_tokenId].status = AuctionStatus.MINTED;
     }
 

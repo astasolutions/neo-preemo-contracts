@@ -77,6 +77,7 @@ contract NeoPreemo is INeoPreemo, ERC721Enumerable, Ownable, CreatorRole {
     }
 
     function _mintToken(uint256 _id, string memory _uri, address _creator, uint256 _sellRate) private  returns (uint256){
+        require(_sellRate <= 50, "Neo Preemo: Cannot set royalties greater than 50%");
         totalTokens = totalTokens.add(1);
         _mint(_creator, _id);
         tokenCreator[_id] = _creator;
@@ -94,12 +95,14 @@ contract NeoPreemo is INeoPreemo, ERC721Enumerable, Ownable, CreatorRole {
 
     // Create token and transfer to the buyer
     function createTokenFor(uint256 _id, string memory _uri, address _creator, address _buyer, uint256 _sellRate) public override uniqueURI(_uri) onlyCreator {
+        require(_creator != _buyer, "Neo Preemo: Buyer is the same as creator");
         uint256 newId = _mintToken(_id, _uri, _creator, _sellRate);
         uniqueUriToken[_uri] = newId;
         _transfer(_creator, _buyer, newId);
     }
 
     function createTokenForEdition(uint256 _id, string memory _uri, address _creator, address _buyer, bool _isOriginal, uint256 _sellRate) public override onlyCreator {
+        require(_creator != _buyer, "Neo Preemo: Buyer is the same as creator");
         uint256 newId = _mintToken(_id, _uri, _creator, _sellRate);
         if(_isOriginal){
             require(uniqueUriToken[_uri] == 0, "Neo Preemo: Url already used");

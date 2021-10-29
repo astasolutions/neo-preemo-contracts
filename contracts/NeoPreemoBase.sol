@@ -19,9 +19,12 @@ abstract contract NeoPreemoBase  is INeoPreemoBase, Ownable {
 
     uint creatorRate;
 
-    mapping(uint256 => string) tokenUri;
+    struct TokenDetail {
+        string tokenUri;
+        address tokenCreator;
+    }
 
-    mapping(uint256 => address) tokenCreator;
+    mapping(uint256 => TokenDetail) tokenDetails;
 
     constructor(address _tokenContract, address _platformwallet) {
         tokenContract = _tokenContract;
@@ -38,11 +41,11 @@ abstract contract NeoPreemoBase  is INeoPreemoBase, Ownable {
 
     // Check if the sale exist on this contract, not if the token exist on token contract
     function _exists(uint256 tokenId) internal view virtual returns (bool) {
-        return tokenCreator[tokenId] != address(0);
+        return tokenDetails[tokenId].tokenCreator != address(0);
     }
 
     function tokenURI(uint256 _tokenId) public view override virtual returns (string memory) {
-        return tokenUri[_tokenId];
+        return tokenDetails[_tokenId].tokenUri;
     }
 
     function setCreatorCommission(uint256 _percentage)  public override onlyOwner {
