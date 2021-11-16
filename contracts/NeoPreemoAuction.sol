@@ -117,11 +117,17 @@ contract NeoPreemoAuction is NeoPreemoBase, INeoPreemoAuction {
         require(isValidBid(_tokenId), "Invalid Ether amount sent.");
         Auction storage tmpAuction = tokenCurrentAuction[_tokenId];
         require(_msgSender() != tmpAuction.owner, "Buyer is the same as the owner");
+        
+        address payable pre_buyer = tmpAuction.currentBuyer;
+        uint256 prev_bid_price = tmpAuction.currentBidPrice;
+        
+        // Update current buyer and bid price
         tmpAuction.currentBidPrice = msg.value;
         tmpAuction.currentBuyer = payable(_msgSender());
 
-        if(tmpAuction.currentBuyer != address(0)) {
-            tmpAuction.currentBuyer.transfer(tmpAuction.currentBidPrice);
+        // return funds to previous buyer
+        if(pre_buyer != address(0) && prev_bid_price != 0) {
+            pre_buyer.transfer(prev_bid_price);
         }
 
         emit Bid(msg.sender, msg.value, _tokenId); 
@@ -130,30 +136,30 @@ contract NeoPreemoAuction is NeoPreemoBase, INeoPreemoAuction {
     function acceptBid(uint256 _tokenId) public override auctionExist(_tokenId) auctionIsOpen(_tokenId) onlyOwner{
         Auction storage tmpAuction = tokenCurrentAuction[_tokenId];
         
-        // payout logic
         if(tmpAuction.currentBuyer != address(0) && tmpAuction.currentBidPrice != 0) {
-             // transfer resell commission for the artist
             if(tmpAuction.auctionType == SaleType.RESELL) {
                 tmpAuction.platformCommission = tmpAuction.currentBidPrice.mul(resellRate).div(100);
                 tmpAuction.creatorCommission = tmpAuction.currentBidPrice.mul(_getTokenResellRate(_tokenId)).div(100);
-                tmpAuction.creator.transfer(tmpAuction.creatorCommission);
             } else {
                 tmpAuction.platformCommission = tmpAuction.currentBidPrice.mul(initialRate).div(100);
             }
-           
-            platformWallet.transfer(tmpAuction.platformCommission);
-            tmpAuction.owner.transfer(tmpAuction.currentBidPrice.sub(tmpAuction.platformCommission).sub(tmpAuction.creatorCommission));
             tmpAuction.status = AuctionStatus.SOLD;
         } else {
             tmpAuction.status = AuctionStatus.CLOSED;
+            return;
         }
         
-        // Mint token
+        // Mint token & payout
         if(tmpAuction.auctionType == SaleType.INITIAL) {
             _mintToken(_tokenId);
         } else {
             NeoPreemo(tokenContract).transferFrom(tmpAuction.owner, tmpAuction.currentBuyer, _tokenId);
+            // Pay resell commission
+            tmpAuction.creator.transfer(tmpAuction.creatorCommission);
         }
+
+        platformWallet.transfer(tmpAuction.platformCommission);
+        tmpAuction.owner.transfer(tmpAuction.currentBidPrice.sub(tmpAuction.platformCommission).sub(tmpAuction.creatorCommission));
 
         emit AcceptBid(tmpAuction.currentBuyer, tmpAuction.owner, tmpAuction.currentBidPrice, _tokenId);
     }

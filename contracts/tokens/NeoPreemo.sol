@@ -13,13 +13,15 @@ contract NeoPreemo is INeoPreemo, ERC721Enumerable, Ownable, CreatorRole {
 
     uint256 private totalTokens;
 
-    mapping(uint256 => address) private tokenCreator;
-  
-    mapping(uint256 => string) private tokenToURI;
-    
-    mapping(string => uint256) private uniqueUriToken;
+    struct TokenDetail {
+        string uri;
+        address creator;
+        uint256 resellRate;
+    }
 
-    mapping(uint256 => uint256) private tokenResellRate;
+    mapping(uint256 => TokenDetail) private tokenDetails;
+
+    mapping(string => uint256) private uniqueUriToken;
 
     constructor() ERC721("Neo Preemo", "NEOP") {
     }
@@ -57,12 +59,12 @@ contract NeoPreemo is INeoPreemo, ERC721Enumerable, Ownable, CreatorRole {
 
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
         require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
-        return tokenToURI[tokenId];
+        return tokenDetails[tokenId].uri;
     }
 
     function tokenSellRate(uint256 tokenId) public override view virtual returns (uint256) {
         require(_exists(tokenId), "ERC721Metadata: Sell rate query for nonexistent token");
-        return tokenResellRate[tokenId];
+        return tokenDetails[tokenId].resellRate;
     }
 
     function uriOriginalToken(string memory _uri) public override view returns (uint256) {
@@ -72,17 +74,18 @@ contract NeoPreemo is INeoPreemo, ERC721Enumerable, Ownable, CreatorRole {
 
     // Artist wallet address of token
     function creatorOf(uint256 _tokenId) public override view returns (address) {
-        require(tokenCreator[_tokenId] != address(0), "ERC721Metadata: Token creator query for nonexistent token");
-        return tokenCreator[_tokenId];
+        require(tokenDetails[_tokenId].creator != address(0), "ERC721Metadata: Token creator query for nonexistent token");
+        return tokenDetails[_tokenId].creator;
     }
 
     function _mintToken(uint256 _id, string memory _uri, address _creator, uint256 _sellRate) private  returns (uint256){
         require(_sellRate <= 50, "Neo Preemo: Cannot set royalties greater than 50%");
         totalTokens = totalTokens.add(1);
         _mint(_creator, _id);
-        tokenCreator[_id] = _creator;
-        tokenToURI[_id] = _uri;
-        tokenResellRate[_id] = _sellRate;
+        TokenDetail storage tokenDetail = tokenDetails[_id];
+        tokenDetail.creator = _creator;
+        tokenDetail.uri = _uri;
+        tokenDetail.resellRate = _sellRate;
         emit TokenCreated(_id, _uri, _msgSender());
         return _id;
     }

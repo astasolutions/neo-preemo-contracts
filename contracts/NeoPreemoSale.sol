@@ -116,17 +116,13 @@ contract NeoPreemoSale is NeoPreemoBase, INeoPreemoSale {
         require(msg.value >= tmpSale.price, "NeoPreemoSale: insuficient ether value sent");
         require(_msgSender() != tmpSale.owner, "Buyer is the same as the owner");
 
-        // payout logic
         tmpSale.buyer = payable(_msgSender());
         if(tmpSale.saleType == SaleType.RESELL) {
             tmpSale.platformCommission = msg.value.mul(resellRate).div(100);
             tmpSale.creatorCommission = msg.value.mul(_getTokenResellRate(_tokenId)).div(100);
-            tmpSale.creator.transfer(tmpSale.creatorCommission);
         } else {
             tmpSale.platformCommission = msg.value.mul(initialRate).div(100);
         }
-        platformWallet.transfer(tmpSale.platformCommission);
-        tmpSale.owner.transfer(msg.value.sub(tmpSale.platformCommission).sub(tmpSale.creatorCommission));
 
         uint256 tokenEditionId = _tokenId;
         
@@ -145,10 +141,12 @@ contract NeoPreemoSale is NeoPreemoBase, INeoPreemoSale {
             } else {
                 _mintToken(_tokenId, tokenEditionId, false);
             }
-            
         } else {
             NeoPreemo(tokenContract).transferFrom(tmpSale.owner, _msgSender(), _tokenId);
+            tmpSale.creator.transfer(tmpSale.creatorCommission);
         }
+        platformWallet.transfer(tmpSale.platformCommission);
+        tmpSale.owner.transfer(msg.value.sub(tmpSale.platformCommission).sub(tmpSale.creatorCommission));
 
         emit Purchased(tokenEditionId, _msgSender(), msg.value);
     }
